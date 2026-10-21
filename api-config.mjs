@@ -1,1 +1,1 @@
-export const API_BASE="https://ips-pastor-william-publisher.trycloudflare.com";
+export const API_BASE="https://salvador-reservation-exposure-facial.trycloudflare.com";
