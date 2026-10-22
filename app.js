@@ -1,4 +1,4 @@
-import {API_BASE} from './api-config.mjs';
+import {API_BASE} from './api-config.mjs?v=1792703672987';
 import {statusLabel,statusOptions,matchesStatus,matchesSelection,statusSummary} from './status-display.mjs';
 const $=s=>document.querySelector(s);let records=[],groups=[],page=1,selected=null;
 const normalize=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
