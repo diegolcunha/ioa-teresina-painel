@@ -1,7 +1,9 @@
-import {API_BASE} from './api-config.mjs?v=1792704048712';
+import {API_BASE as CONFIGURED_API_BASE} from './api-config.mjs?v=1792704385984';
+let API_BASE=CONFIGURED_API_BASE;
+// Consulta o destino atual a cada abertura, sem reutilizar o endereço de um túnel anterior.
+if(API_BASE){try{const config=await fetch(new URL('./api-endpoint.json?t='+Date.now(),import.meta.url),{cache:'no-store'});if(config.ok){const value=await config.json();if(/^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/.test(value.apiBase))API_BASE=value.apiBase;}}catch{}}
 import {statusLabel,statusOptions,matchesStatus,matchesSelection,statusSummary} from './status-display.mjs';
 const $=s=>document.querySelector(s);let records=[],groups=[],page=1,selected=null;
-if(API_BASE){$('#direct-access-link').href=API_BASE;$('#direct-access').hidden=false;}
 const normalize=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 const money=n=>n===null||n===undefined?'Não informado':Number(n).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const date=s=>s?new Date(s+'T12:00:00').toLocaleDateString('pt-BR'):'Não informada';
