@@ -1,6 +1,7 @@
-import {API_BASE} from './api-config.mjs?v=1792703672987';
+import {API_BASE} from './api-config.mjs?v=1792703859450';
 import {statusLabel,statusOptions,matchesStatus,matchesSelection,statusSummary} from './status-display.mjs';
 const $=s=>document.querySelector(s);let records=[],groups=[],page=1,selected=null;
+if(API_BASE){$('#direct-access-link').href=API_BASE;$('#direct-access').hidden=false;}
 const normalize=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 const money=n=>n===null||n===undefined?'Não informado':Number(n).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const date=s=>s?new Date(s+'T12:00:00').toLocaleDateString('pt-BR'):'Não informada';
