@@ -1,4 +1,4 @@
-import {API_BASE} from './api-config.mjs?v=1792703859450';
+import {API_BASE} from './api-config.mjs?v=1792704048712';
 import {statusLabel,statusOptions,matchesStatus,matchesSelection,statusSummary} from './status-display.mjs';
 const $=s=>document.querySelector(s);let records=[],groups=[],page=1,selected=null;
 if(API_BASE){$('#direct-access-link').href=API_BASE;$('#direct-access').hidden=false;}
