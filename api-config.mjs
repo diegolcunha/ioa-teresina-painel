@@ -1,1 +1,1 @@
-export const API_BASE="https://salvador-reservation-exposure-facial.trycloudflare.com";
+export const API_BASE="https://bent-geometry-issn-bool.trycloudflare.com";
