@@ -1,9 +1,10 @@
-import {elapsedCourseTime} from './course-time.mjs?v=1792759192712';
-import {API_BASE as CONFIGURED_API_BASE} from './api-config.mjs?v=1792759192712';
+import {createCourseManagement} from './course-management-ui.mjs?v=1792781981580';
+import {elapsedCourseTime} from './course-time.mjs?v=1792781981580';
+import {API_BASE as CONFIGURED_API_BASE} from './api-config.mjs?v=1792781981580';
 let API_BASE=CONFIGURED_API_BASE;
 // Consulta o destino atual a cada abertura, sem reutilizar o endereço de um túnel anterior.
 if(API_BASE){try{const config=await fetch(new URL('./api-endpoint.json?t='+Date.now(),import.meta.url),{cache:'no-store'});if(config.ok){const value=await config.json();if(/^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/.test(value.apiBase))API_BASE=value.apiBase;}}catch{}}
-import {statusLabel,statusOptions,matchesStatus,matchesSelection,statusSummary,consensusStatus,statusTone} from './status-display.mjs?v=1792759192712';
+import {statusLabel,statusOptions,matchesStatus,matchesSelection,statusSummary,consensusStatus,statusTone} from './status-display.mjs?v=1792781981580';
 const $=s=>document.querySelector(s);let records=[],groups=[],page=1,selected=null;
 const normalize=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 const money=n=>n===null||n===undefined?'Não informado':Number(n).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
@@ -20,7 +21,7 @@ async function api(path,body){
  return value;
 }
 function toast(message){$('#toast').textContent=message;$('#toast').hidden=false;setTimeout(()=>$('#toast').hidden=true,6000);}
-function showLogin(){records=[];groups=[];$('#cards').replaceChildren();$('#detail-content').replaceChildren();$('#contact-dialog').close();$('#contact-edit-form').reset();$('#detail').close();$('#users-list').replaceChildren();$('#history-list').replaceChildren();$('#user-form').reset();$('#dashboard').hidden=true;$('#login').hidden=false;}
+function showLogin(){courseManager.reset();records=[];groups=[];$('#cards').replaceChildren();$('#detail-content').replaceChildren();$('#contact-dialog').close();$('#contact-edit-form').reset();$('#detail').close();$('#users-list').replaceChildren();$('#history-list').replaceChildren();$('#user-form').reset();$('#dashboard').hidden=true;$('#login').hidden=false;}
 function badge(value,field,withCategory=false){value=statusLabel(field,value);const tone=statusTone(field,value);const category=withCategory?({STATUS_FINANCEIRO:'Financeiro',TEM_CONTRATO:'Contrato',STATUS:'Acadêmico'}[field]||''):'';return `<span class="badge ${tone}">${category?escape(category)+': ':''}${escape(value)}</span>`;}
 function consensusBadges(members){return ['STATUS_FINANCEIRO','TEM_CONTRATO','STATUS'].map(field=>badge(consensusStatus(members,field),field,true)).join('');}
 function filterValues(id){return [...$('#'+id).selectedOptions].map(option=>option.value).filter(Boolean);}
@@ -135,8 +136,8 @@ const timeStamp=s=>s?new Date(s).toLocaleString('pt-BR',{timeZone:'America/Sao_P
 function showView(view){
  const planned={attendance:'Lançamento de Frequências',actions:'Ações e Correções',contract:'Gestão de Contrato',debt:'Gestão de Inadimplentes',onboarding:'Onbording de Novatos',evasion:'Risco de Evasão'};
  const isAction=['actions','contract','debt','onboarding','evasion'].includes(view);
- $('#students-view').hidden=view!=='students';$('#settings-view').hidden=view!=='settings';$('#planned-view').hidden=!planned[view];
- for(const id of ['students','settings','attendance','actions','contract','debt','onboarding','evasion']){const button=$('#nav-'+id);button.classList.toggle('nav-active',view===id||(id==='actions'&&isAction));if(view===id)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');}
+ $('#students-view').hidden=view!=='students';$('#courses-view').hidden=view!=='courses';$('#settings-view').hidden=view!=='settings';$('#planned-view').hidden=!planned[view];
+ for(const id of ['students','courses','settings','attendance','actions','contract','debt','onboarding','evasion']){const button=$('#nav-'+id);button.classList.toggle('nav-active',view===id||(id==='actions'&&isAction));if(view===id)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');}
  if(isAction){$('#actions-submenu').hidden=false;$('#nav-actions').setAttribute('aria-expanded','true');}
  if(planned[view]){$('#planned-title').textContent=planned[view];$('#planned-heading').textContent=view==='actions'?'Selecione uma área no submenu':'Desenvolvimento futuro';}
 }
@@ -172,6 +173,7 @@ async function selectSettingsTab(tab){
  await settingsAction(async()=>{await loadUsers();if(tab!=='users')await loadHistory();});
 }
 $('#nav-students').onclick=()=>showView('students');
+$('#nav-courses').onclick=()=>{showView('courses');courseManager.load();};
 for(const view of ['attendance','contract','debt','onboarding','evasion'])$('#nav-'+view).onclick=()=>showView(view);
 $('#nav-actions').onclick=()=>{
  const expanded=$('#nav-actions').getAttribute('aria-expanded')==='true';
@@ -185,6 +187,7 @@ $('#history-user').onchange=()=>{historyPage=1;settingsAction(loadHistory);};
 $('#history-prev').onclick=()=>{if(historyPage>1){historyPage--;settingsAction(loadHistory);}};
 $('#history-next').onclick=()=>{if(historyPage*20<historyTotal){historyPage++;settingsAction(loadHistory);}};
 $('#user-form').addEventListener('submit',async e=>{e.preventDefault();const form=e.target,button=form.querySelector('button');button.disabled=true;$('#user-result').textContent='';try{await api('users',Object.fromEntries(new FormData(form)));form.reset();$('#user-result').textContent='Usuário cadastrado.';await loadUsers();}catch(error){$('#user-result').textContent=error.message;}finally{button.disabled=false;}});
+const courseManager=createCourseManagement({api,escape,date,toast,onStudent:openDetail});
 api('me').then(load).catch(()=>showLogin());
 
 function renderAcademicLink(r){return `<section class="link-detail"><h3>${escape(r.CURSO_AJUSTADO)}</h3><p>${escape(r.TURMA_AJUSTADA||r.TURMA)}</p><div class="badges">${badge(r.STATUS_FINANCEIRO,'STATUS_FINANCEIRO',true)}${badge(r.TEM_CONTRATO,'TEM_CONTRATO',true)}${badge(r.STATUS,'STATUS',true)}</div><dl class="facts">${[['Tempo cursado',elapsedCourseTime([r.DT_INICIO])],['Duração',r.DURACAO_AJUSTADA_MESES?r.DURACAO_AJUSTADA_MESES+' meses (ajustada)':r.TEMPO_TURMA_MESES||'Não informada'],['Término',r.DT_FIM_AJUSTADO||r.DT_FIM||'Não informado'],['Matrícula',r.DT_MATRICULA],['Código do contrato',r.CODCONTRATO],['Contrato original',money(r.VLR_CONTRATO)],['Contrato ajustado',money(r.VLR_CONTRATO_AJUSTADO)],['Em aberto',money(r.VLR_EM_ABERTO)],['Em atraso',money(r.VLR_EM_ATRASO)],['Inadimplente',money(r.VLR_INADIMPLENTE)]].map(([k,v])=>`<div><dt>${k}</dt><dd>${escape(v)}</dd></div>`).join('')}</dl><p class="course-time-note">Tempo cursado: tempo desde o início da turma; ainda não considera frequência.</p><form data-review="${r.key}"><label>Observações<textarea name="note" maxlength="3000" placeholder="Registre o acompanhamento deste vínculo">${escape(r.review.note)}</textarea></label><div class="detail-actions"><button>Salvar acompanhamento</button><button type="button" class="close-detail-inline">Fechar a ficha</button></div><small class="saved">${r.review.updated?'Última alteração: '+escape(r.review.author)+' · '+new Date(r.review.updated).toLocaleString('pt-BR'): 'Nenhum acompanhamento registrado.'}</small></form></section>`;}
