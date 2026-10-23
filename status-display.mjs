@@ -32,3 +32,9 @@ export function statusSummary(field,records){
  for(const record of records){const label=statusLabel(field,record[field])||'Não informado';counts.set(label,(counts.get(label)||0)+1);}
  return [...counts].map(([label,count])=>({label,count,percent:records.length?count/records.length*100:0}));
 }
+
+// Compara os rótulos de exibição; ausência de informação também participa da comparação.
+export function consensusStatus(records,field){
+ const labels=[...new Set(records.map(r=>statusLabel(field,r[field])||'Não informado'))];
+ return labels.length===1?labels[0]:labels.length?'Conferir':'Não informado';
+}
