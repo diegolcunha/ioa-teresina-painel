@@ -38,3 +38,11 @@ export function consensusStatus(records,field){
  const labels=[...new Set(records.map(r=>statusLabel(field,r[field])||'Não informado'))];
  return labels.length===1?labels[0]:labels.length?'Conferir':'Não informado';
 }
+
+export function statusTone(field,value){
+ const label=key(statusLabel(field,value));
+ if(field==='STATUS_FINANCEIRO'){if(label==='adimplente')return 'green';if(label==='em atraso')return 'yellow';if(label==='inadimplente')return 'red';}
+ if(field==='TEM_CONTRATO'){if(label==='assinado')return 'green';if(['nao assinado','cancelado','assinado parcial'].includes(label))return 'red';}
+ if(field==='STATUS'){if(label==='matriculado')return 'green';if(label==='pre-matricula')return 'yellow';if(label==='cancelado')return 'red';}
+ return '';
+}

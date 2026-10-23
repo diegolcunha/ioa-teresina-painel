@@ -46,3 +46,5 @@ aside{overflow-y:auto}.nav-item{line-height:1.5;min-width:0;flex-shrink:0}.nav-i
 @media(max-width:600px){.contact-summary{grid-template-columns:minmax(0,1fr) auto}.contact-summary>div:first-child{grid-column:1/-1}.contact-summary button{justify-self:end}}
 
 .commercial-product{padding:18px 0;border-top:1px solid #dce5e2}.commercial-product details>summary{cursor:pointer;padding:12px 0;font-weight:600}.product-warning{padding:10px 14px;background:#fff3df;border-left:4px solid #c85c14;border-radius:6px}
+
+.badge.yellow{background:#fff3cd;color:#806000}.badge.red{background:#fce8e8;color:#b42318}.course-time-note{font-size:10px;color:#7a8a81;margin:8px 0 14px}
