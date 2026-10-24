@@ -1,19 +1,21 @@
-import {createCourseManagement} from './course-management-ui.mjs?v=1792783379754';
-import {elapsedCourseTime} from './course-time.mjs?v=1792783379754';
-import {API_BASE as CONFIGURED_API_BASE} from './api-config.mjs?v=1792783379754';
+import {createDeclarations} from './declarations-ui.mjs?v=1792802958655';
+import {createCourseManagement} from './course-management-ui.mjs?v=1792802958655';
+import {elapsedCourseTime} from './course-time.mjs?v=1792802958655';
+import {API_BASE as CONFIGURED_API_BASE} from './api-config.mjs?v=1792802958655';
 let API_BASE=CONFIGURED_API_BASE;
 // Consulta o destino atual a cada abertura, sem reutilizar o endereço de um túnel anterior.
 if(API_BASE){try{const config=await fetch(new URL('./api-endpoint.json?t='+Date.now(),import.meta.url),{cache:'no-store'});if(config.ok){const value=await config.json();if(/^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/.test(value.apiBase))API_BASE=value.apiBase;}}catch{}}
-import {statusLabel,statusOptions,matchesStatus,matchesSelection,statusSummary,consensusStatus,statusTone} from './status-display.mjs?v=1792783379754';
-const $=s=>document.querySelector(s);let records=[],groups=[],page=1,selected=null;
+import {statusLabel,statusOptions,matchesStatus,matchesSelection,statusSummary,consensusStatus,statusTone} from './status-display.mjs?v=1792802958655';
+const $=s=>document.querySelector(s);let records=[],groups=[],page=1,selected=null,isAdmin=false;
 const normalize=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 const money=n=>n===null||n===undefined?'Não informado':Number(n).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const date=s=>s?new Date(s+'T12:00:00').toLocaleDateString('pt-BR'):'Não informada';
 const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-async function api(path,body){
+async function api(path,body,options={}){
  let token;try{token=sessionStorage.getItem('ioa_session_token');}catch{}
  const headers={...(body?{'Content-Type':'application/json'}:{}),...(API_BASE&&token?{Authorization:'Bearer '+token}:{})};
  let res;try{res=await fetch(API_BASE+'/api/'+path,{method:body?'POST':'GET',headers,credentials:API_BASE?'omit':'same-origin',body:body?JSON.stringify(body):undefined});}catch{throw Error('Servidor indisponível. Verifique se o PC e a conexão pública do painel estão ligados.');}
+ if(options.pdf&&res.ok)return res.blob();
  const value=await res.json();
  if(!res.ok){if(res.status===401&&path!=='login'){try{sessionStorage.removeItem('ioa_session_token');}catch{}showLogin();}throw Error(value.error||'Falha na operação');}
  if(path==='login'&&value.sessionToken){try{sessionStorage.setItem('ioa_session_token',value.sessionToken);}catch{throw Error('Permita armazenamento nesta aba para entrar no painel.');}}
@@ -21,7 +23,7 @@ async function api(path,body){
  return value;
 }
 function toast(message){$('#toast').textContent=message;$('#toast').hidden=false;setTimeout(()=>$('#toast').hidden=true,6000);}
-function showLogin(){courseManager.reset();records=[];groups=[];$('#cards').replaceChildren();$('#detail-content').replaceChildren();$('#contact-dialog').close();$('#contact-edit-form').reset();$('#detail').close();$('#users-list').replaceChildren();$('#history-list').replaceChildren();$('#user-form').reset();$('#dashboard').hidden=true;$('#login').hidden=false;}
+function showLogin(){isAdmin=false;declarationManager.reset();courseManager.reset();records=[];groups=[];$('#cards').replaceChildren();$('#detail-content').replaceChildren();$('#contact-dialog').close();$('#contact-edit-form').reset();$('#detail').close();$('#users-list').replaceChildren();$('#history-list').replaceChildren();$('#user-form').reset();$('#dashboard').hidden=true;$('#login').hidden=false;}
 function badge(value,field,withCategory=false){value=statusLabel(field,value);const tone=statusTone(field,value);const category=withCategory?({STATUS_FINANCEIRO:'Financeiro',TEM_CONTRATO:'Contrato',STATUS:'Acadêmico'}[field]||''):'';return `<span class="badge ${tone}">${category?escape(category)+': ':''}${escape(value)}</span>`;}
 function consensusBadges(members){return ['STATUS_FINANCEIRO','TEM_CONTRATO','STATUS'].map(field=>badge(consensusStatus(members,field),field,true)).join('');}
 function filterValues(id){return [...$('#'+id).selectedOptions].map(option=>option.value).filter(Boolean);}
@@ -60,7 +62,7 @@ function setupMultiFilter(id){
  dropdown.addEventListener('keydown',event=>{if(event.key==='Escape'){dropdown.open=false;summary.focus();}});
 }
 document.addEventListener('click',event=>{for(const dropdown of document.querySelectorAll('.multi-filter'))if(!dropdown.contains(event.target))dropdown.open=false;});
-async function load(user){
+async function load(user){isAdmin=!!user.admin;
  const source=await api('students');records=source.records;const byId=new Map();for(const r of records){if(!byId.has(r.ID_CLIENTE))byId.set(r.ID_CLIENTE,{id:r.ID_CLIENTE,name:r.NOME,links:[]});byId.get(r.ID_CLIENTE).links.push(r);}groups=[...byId.values()].sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
  const products=source.products||records.map(r=>({id:r.key,studentId:r.ID_CLIENTE,name:r.CURSO_AJUSTADO,memberKeys:[r.key],consolidated:false,warnings:[]}));
  const recordMap=new Map(records.map(r=>[r.key,r]));for(const g of groups)g.products=products.filter(p=>p.studentId===g.id).map(p=>({...p,members:p.memberKeys.map(key=>recordMap.get(key))}));
@@ -84,7 +86,7 @@ function render(){
  const pages=Math.max(1,Math.ceil(filtered.length/12));page=Math.min(page,pages);$('#result-count').textContent=filtered.length+' alunos encontrados';$('#page-label').textContent=`${page} de ${pages}`;$('#prev').disabled=page===1;$('#next').disabled=page===pages;
  $('#cards').innerHTML=filtered.slice((page-1)*12,page*12).map(g=>{const r=g.links[0];const initials=g.name.split(' ').filter(Boolean).slice(0,2).map(s=>s[0]).join('');return `<article class="student"><div class="student-top"><div class="avatar">${escape(initials)}</div><div><h3>${escape(g.name.toLocaleLowerCase('pt-BR'))}</h3><span class="id">ID ${escape(g.id)} · ${g.products.length} produto(s) no filtro</span></div></div><p class="course-name">${escape([...new Set(g.products.map(p=>p.name))].join(" · "))}</p><div class="badges">${consensusBadges(g.links)}</div><div class="student-bottom"><span>${r.review.checked?'Conferência registrada':'Conferência pendente'}</span><button data-student="${escape(g.id)}">Ver ficha →</button></div></article>`;}).join('')||'<div class="empty">Nenhum aluno encontrado para estes filtros.</div>';
 }
-function openDetail(id){selected=id;const g=groups.find(g=>g.id===id),primary=g.links[0];$('#detail-content').innerHTML=`<h2 class="detail-title">${escape(g.name)}</h2><p>ID ${escape(id)} · ${g.products.length} produto(s) · ${g.links.length} registro(s) de origem</p><div class="contact-summary"><div><span>E-mail</span><strong data-contact-email>${escape(primary.EMAIL||'Não informado')}</strong></div><div><span>Telefone</span><strong data-contact-phone>${escape(primary.TELEFONE||'Não informado')}</strong></div><button type="button" class="ghost" data-edit-contacts="${escape(id)}">Editar contatos</button></div>`+g.products.map(p=>p.consolidated?`<section class="commercial-product"><h3>${escape(p.name)}</h3><p>${p.durationMonths?p.durationMonths+' meses':'Duração comercial a confirmar'}</p><div class="badges">${consensusBadges(p.members)}</div><dl class="facts"><div><dt>Tempo cursado</dt><dd>${escape(elapsedCourseTime(p.members.map(r=>r.DT_INICIO)))}</dd></div></dl><p class="course-time-note">Tempo desde o início da turma; ainda não considera frequência.</p>${p.warnings.map(w=>`<p class="product-warning">${escape(w)}</p>`).join('')}<details><summary>Detalhes das matrículas</summary>${p.members.map(r=>renderAcademicLink(r)).join('')}</details><div class="detail-actions"><button type="button" class="close-detail-inline">Fechar a ficha</button></div></section>`:p.members.map(r=>renderAcademicLink(r)).join('')).join('');if(!$('#detail').open)$('#detail').showModal();}
+function openDetail(id){selected=id;const g=groups.find(g=>g.id===id),primary=g.links[0];$('#detail-content').innerHTML=`<h2 class="detail-title">${escape(g.name)}</h2><p>ID ${escape(id)} · ${g.products.length} produto(s) · ${g.links.length} registro(s) de origem</p><div class="contact-summary"><div><span>E-mail</span><strong data-contact-email>${escape(primary.EMAIL||'Não informado')}</strong></div><div><span>Telefone</span><strong data-contact-phone>${escape(primary.TELEFONE||'Não informado')}</strong></div><button type="button" class="ghost" data-edit-contacts="${escape(id)}">Editar contatos</button></div>${isAdmin?`<div class="declaration-actions"><button type="button" class="ghost" data-declaration="${escape(id)}">Emitir declaração</button></div>`:''}`+g.products.map(p=>p.consolidated?`<section class="commercial-product"><h3>${escape(p.name)}</h3><p>${p.durationMonths?p.durationMonths+' meses':'Duração comercial a confirmar'}</p><div class="badges">${consensusBadges(p.members)}</div><dl class="facts"><div><dt>Tempo cursado</dt><dd>${escape(elapsedCourseTime(p.members.map(r=>r.DT_INICIO)))}</dd></div></dl><p class="course-time-note">Tempo desde o início da turma; ainda não considera frequência.</p>${p.warnings.map(w=>`<p class="product-warning">${escape(w)}</p>`).join('')}<details><summary>Detalhes das matrículas</summary>${p.members.map(r=>renderAcademicLink(r)).join('')}</details><div class="detail-actions"><button type="button" class="close-detail-inline">Fechar a ficha</button></div></section>`:p.members.map(r=>renderAcademicLink(r)).join('')).join('');if(!$('#detail').open)$('#detail').showModal();}
 async function saveContacts(form,restore=false){
  const g=groups.find(g=>g.id===form.dataset.contact),r=g.links[0];
  const payload={studentId:g.id,version:r.contact.version};
@@ -107,6 +109,7 @@ async function saveContacts(form,restore=false){
  }catch(error){$('#contact-error').textContent=error.message;}finally{buttons.forEach(b=>b.disabled=false);}
 }
 $('#detail-content').addEventListener('click',event=>{
+ const declaration=event.target.closest('[data-declaration]');if(declaration){declarationManager.open(declaration.dataset.declaration);return;}
  const button=event.target.closest('[data-edit-contacts]');if(!button)return;
  const g=groups.find(g=>g.id===button.dataset.editContacts),r=g.links[0],form=$('#contact-edit-form');
  form.dataset.contact=g.id;form.elements.email.value=r.EMAIL||'';form.elements.phone.value=r.TELEFONE||'';
@@ -187,6 +190,7 @@ $('#history-user').onchange=()=>{historyPage=1;settingsAction(loadHistory);};
 $('#history-prev').onclick=()=>{if(historyPage>1){historyPage--;settingsAction(loadHistory);}};
 $('#history-next').onclick=()=>{if(historyPage*20<historyTotal){historyPage++;settingsAction(loadHistory);}};
 $('#user-form').addEventListener('submit',async e=>{e.preventDefault();const form=e.target,button=form.querySelector('button');button.disabled=true;$('#user-result').textContent='';try{await api('users',Object.fromEntries(new FormData(form)));form.reset();$('#user-result').textContent='Usuário cadastrado.';await loadUsers();}catch(error){$('#user-result').textContent=error.message;}finally{button.disabled=false;}});
+const declarationManager=createDeclarations({api,toast,date});
 const courseManager=createCourseManagement({api,escape,date,toast,onStudent:openDetail});
 api('me').then(load).catch(()=>showLogin());
 
