@@ -1,4 +1,4 @@
-import {statusSummary,statusTone} from './status-display.mjs?v=1793015791348';
+import {statusSummary,statusTone} from './status-display.mjs?v=1793037408525';
 export function createCourseManagement({api,escape,date,toast,onStudent}){
  const $=s=>document.querySelector(s);let data=null,request=0,editing=null;
  const today=()=>new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
