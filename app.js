@@ -1,11 +1,11 @@
-import {createDeclarations} from './declarations-ui.mjs?v=1793184539465';
-import {createCourseManagement} from './course-management-ui.mjs?v=1793184539465';
-import {elapsedCourseTime} from './course-time.mjs?v=1793184539465';
-import {API_BASE as CONFIGURED_API_BASE} from './api-config.mjs?v=1793184539465';
+import {createDeclarations} from './declarations-ui.mjs?v=1793185772594';
+import {createCourseManagement} from './course-management-ui.mjs?v=1793185772594';
+import {elapsedCourseTime} from './course-time.mjs?v=1793185772594';
+import {API_BASE as CONFIGURED_API_BASE} from './api-config.mjs?v=1793185772594';
 let API_BASE=CONFIGURED_API_BASE;
 // Consulta o destino atual a cada abertura, sem reutilizar o endereço de um túnel anterior.
 if(API_BASE){try{const config=await fetch(new URL('./api-endpoint.json?t='+Date.now(),import.meta.url),{cache:'no-store'});if(config.ok){const value=await config.json();if(/^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/.test(value.apiBase))API_BASE=value.apiBase;}}catch{}}
-import {statusLabel,statusOptions,matchesStatus,matchesSelection,statusSummary,consensusStatus,statusTone} from './status-display.mjs?v=1793184539465';
+import {statusLabel,statusOptions,matchesStatus,matchesSelection,statusSummary,studentStatusSummary,consensusStatus,statusTone} from './status-display.mjs?v=1793185772594';
 const $=s=>document.querySelector(s);let records=[],groups=[],page=1,selected=null,isAdmin=false;
 const normalize=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 const money=n=>n===null||n===undefined?'Não informado':Number(n).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
@@ -73,12 +73,12 @@ async function load(user){isAdmin=!!user.admin;
   {field:'STATUS_FINANCEIRO',title:'Status Financeiro',colors:['red','green','orange','gray']},
   {field:'TEM_CONTRATO',title:'Status Contrato',colors:['green','teal','orange','red','gray']},
  ];
- $('#metrics').innerHTML=`<p class="overview-note"><strong>${groups.length} alunos</strong> em <strong>${products.length} entradas de produtos</strong>, com <strong>${records.length} registros de origem</strong>. Os gráficos mantêm os status dos registros de origem.</p>`+charts.map(chart=>{
-  const summary=statusSummary(chart.field,records).map((item,i)=>({...item,color:chart.colors[i]||'gray'})).sort((a,b)=>b.percent-a.percent);
-  return `<section class="status-chart" aria-labelledby="chart-${chart.field}"><header class="status-chart-header"><h2 id="chart-${chart.field}">${chart.title}</h2><span>${records.length} vínculos</span></header><div class="status-chart-rows">${summary.map((item,i)=>{
+ $('#metrics').innerHTML=`<p class="overview-note"><strong>${groups.length} alunos</strong> em <strong>${products.length} entradas de produtos</strong>, com <strong>${records.length} registros de origem</strong>. Cada aluno é contado uma vez por gráfico. Status diferentes entre seus registros aparecem como “Status divergentes”.</p>`+charts.map(chart=>{
+  const summary=studentStatusSummary(chart.field,records).map((item,i)=>({...item,color:chart.colors[i]||'gray'})).sort((a,b)=>b.percent-a.percent);
+  return `<section class="status-chart" aria-labelledby="chart-${chart.field}"><header class="status-chart-header"><h2 id="chart-${chart.field}">${chart.title}</h2><span>${groups.length} alunos</span></header><div class="status-chart-rows">${summary.map((item,i)=>{
    const percent=item.percent.toLocaleString('pt-BR',{maximumFractionDigits:1});
    return `<div class="status-chart-row"><div class="status-chart-label"><span>${escape(item.label)}</span><div><strong>${item.count}</strong><small>${percent}%</small></div></div><svg viewBox="0 0 100 7" preserveAspectRatio="none" aria-hidden="true" focusable="false"><rect class="chart-track" width="100" height="7" rx="3.5"/><rect class="chart-${item.color}" width="${item.percent.toFixed(3)}" height="7" rx="3.5"/></svg></div>`;
-  }).join('')}</div><p class="status-chart-foot">Quantidade e participação dos vínculos</p></section>`;
+  }).join('')}</div><p class="status-chart-foot">Alunos únicos por ID · base completa</p></section>`;
  }).join('');page=1;render();$('#login').hidden=true;$('#dashboard').hidden=false;
 }
 function render(){

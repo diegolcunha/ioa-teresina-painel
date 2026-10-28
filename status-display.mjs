@@ -46,3 +46,11 @@ export function statusTone(field,value){
  if(field==='STATUS'){if(label==='matriculado')return 'green';if(label==='pre-matricula')return 'yellow';if(label==='cancelado')return 'red';}
  return '';
 }
+
+// Um aluno por ID em cada gráfico; registros distintos só compartilham status por consenso.
+export function studentStatusSummary(field,records){
+ const students=new Map();
+ for(const r of records){const id=String(r.ID_CLIENTE??'').trim();if(!id)throw Error('Registro sem ID do aluno.');if(!students.has(id))students.set(id,new Set());students.get(id).add(statusLabel(field,r[field])||'Não informado');}
+ const unique=[...students].map(([id,labels])=>({ID_CLIENTE:id,[field]:labels.size===1?[...labels][0]:'Status divergentes'}));
+ return statusSummary(field,unique);
+}
