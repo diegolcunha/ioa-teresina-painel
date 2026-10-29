@@ -1,1 +1,1 @@
-export const API_BASE="https://becomes-purchased-glucose-mice.trycloudflare.com";
+export const API_BASE="https://citizen-sand-trunk-animals.trycloudflare.com";
