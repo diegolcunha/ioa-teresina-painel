@@ -1,11 +1,12 @@
-import {createDeclarations} from './declarations-ui.mjs?v=1793364052296';
-import {createCourseManagement} from './course-management-ui.mjs?v=1793364052296';
-import {elapsedCourseTime} from './course-time.mjs?v=1793364052296';
-import {API_BASE as CONFIGURED_API_BASE} from './api-config.mjs?v=1793364052296';
+import {whatsappLink} from './whatsapp.mjs';
+import {createDeclarations} from './declarations-ui.mjs?v=1793794398366';
+import {createCourseManagement} from './course-management-ui.mjs?v=1793794398366';
+import {elapsedCourseTime} from './course-time.mjs?v=1793794398366';
+import {API_BASE as CONFIGURED_API_BASE} from './api-config.mjs?v=1793794398366';
 let API_BASE=CONFIGURED_API_BASE;
 // Consulta o destino atual a cada abertura, sem reutilizar o endereço de um túnel anterior.
 if(API_BASE){try{const config=await fetch(new URL('./api-endpoint.json?t='+Date.now(),import.meta.url),{cache:'no-store'});if(config.ok){const value=await config.json();if(/^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/.test(value.apiBase))API_BASE=value.apiBase;}}catch{}}
-import {statusLabel,statusOptions,matchesStatus,matchesSelection,statusSummary,studentStatusSummary,consensusStatus,statusTone} from './status-display.mjs?v=1793364052296';
+import {statusLabel,statusOptions,matchesStatus,matchesSelection,statusSummary,studentStatusSummary,consensusStatus,statusTone} from './status-display.mjs?v=1793794398366';
 const $=s=>document.querySelector(s);let records=[],groups=[],page=1,selected=null,isAdmin=false;
 const normalize=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 const money=n=>n===null||n===undefined?'Não informado':Number(n).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
@@ -86,7 +87,8 @@ function render(){
  const pages=Math.max(1,Math.ceil(filtered.length/12));page=Math.min(page,pages);$('#result-count').textContent=filtered.length+' alunos encontrados';$('#page-label').textContent=`${page} de ${pages}`;$('#prev').disabled=page===1;$('#next').disabled=page===pages;
  $('#cards').innerHTML=filtered.slice((page-1)*12,page*12).map(g=>{const r=g.links[0];const initials=g.name.split(' ').filter(Boolean).slice(0,2).map(s=>s[0]).join('');return `<article class="student"><div class="student-top"><div class="avatar">${escape(initials)}</div><div><h3>${escape(g.name.toLocaleLowerCase('pt-BR'))}</h3><span class="id">ID ${escape(g.id)} · ${g.products.length} produto(s) no filtro</span></div></div><p class="course-name">${escape([...new Set(g.products.map(p=>p.name))].join(" · "))}</p><div class="badges">${consensusBadges(g.links)}</div><div class="student-bottom"><span>${r.review.checked?'Conferência registrada':'Conferência pendente'}</span><button data-student="${escape(g.id)}">Ver ficha →</button></div></article>`;}).join('')||'<div class="empty">Nenhum aluno encontrado para estes filtros.</div>';
 }
-function openDetail(id){selected=id;const g=groups.find(g=>g.id===id),primary=g.links[0];$('#detail-content').innerHTML=`<h2 class="detail-title">${escape(g.name)}</h2><p>ID ${escape(id)} · ${g.products.length} produto(s) · ${g.links.length} registro(s) de origem</p><p class="student-identity">CPF: <strong id="detail-cpf">Consultando…</strong></p><div class="contact-summary"><div><span>E-mail</span><strong data-contact-email>${escape(primary.EMAIL||'Não informado')}</strong></div><div><span>Telefone</span><strong data-contact-phone>${escape(primary.TELEFONE||'Não informado')}</strong></div><button type="button" class="ghost" data-edit-contacts="${escape(id)}">Editar contatos</button></div>${primary.contactSourceGaps?.length?`<p class="helper">${primary.contactSourceGaps.map(g=>escape((g.field==='TELEFONE'?'Telefone':'E-mail')+' preservado da fonte de '+date(g.sourceDate)+'; ausente na fonte de '+date(g.missingSince)+'.')).join(' ')}</p>`:''}${isAdmin?`<div class="declaration-actions"><button type="button" class="ghost" data-declaration="${escape(id)}">Emitir declaração</button></div>`:''}`+g.products.map(p=>p.consolidated?`<section class="commercial-product"><h3>${escape(p.name)}</h3><p>${p.durationMonths?p.durationMonths+' meses':'Duração comercial a confirmar'}</p><div class="badges">${consensusBadges(p.members)}</div><dl class="facts"><div><dt>Tempo cursado</dt><dd>${escape(elapsedCourseTime(p.members.map(r=>r.DT_INICIO)))}</dd></div></dl><p class="course-time-note">Tempo desde o início da turma; ainda não considera frequência.</p>${p.warnings.map(w=>`<p class="product-warning">${escape(w)}</p>`).join('')}<details><summary>Detalhes das matrículas</summary>${p.members.map(r=>renderAcademicLink(r)).join('')}</details><div class="detail-actions"><button type="button" class="close-detail-inline">Fechar a ficha</button></div></section>`:p.members.map(r=>renderAcademicLink(r)).join('')).join('');if(!$('#detail').open)$('#detail').showModal();api('student-identity?'+new URLSearchParams({studentId:id})).then(identity=>{if(selected===id&&$('#detail').open)$('#detail-cpf').textContent=identity.conflict?'Divergente na fonte — conferir':identity.cpf||'Não informado';}).catch(()=>{if(selected===id&&$('#detail').open)$('#detail-cpf').textContent='Consulta indisponível';});}
+function phoneMarkup(phone){const link=whatsappLink(phone);return `<strong data-contact-phone>${escape(phone||'Não informado')}</strong>${link.url?`<a class="whatsapp-link" href="${escape(link.url)}" target="_blank" rel="noopener noreferrer" aria-label="Abrir conversa no WhatsApp em outra aba">Abrir WhatsApp ↗</a>`:link.reason?`<small class="phone-warning">${escape(link.reason)}</small>`:''}`;}
+function openDetail(id){selected=id;const g=groups.find(g=>g.id===id),primary=g.links[0];$('#detail-content').innerHTML=`<h2 class="detail-title">${escape(g.name)}</h2><p>ID ${escape(id)} · ${g.products.length} produto(s) · ${g.links.length} registro(s) de origem</p><p class="student-identity">CPF: <strong id="detail-cpf">Consultando…</strong></p><div class="contact-summary"><div><span>E-mail</span><strong data-contact-email>${escape(primary.EMAIL||'Não informado')}</strong></div><div><span>Telefone</span><div data-phone-actions>${phoneMarkup(primary.TELEFONE)}</div></div><button type="button" class="ghost" data-edit-contacts="${escape(id)}">Editar contatos</button></div>${primary.contactSourceGaps?.length?`<p class="helper">${primary.contactSourceGaps.map(g=>escape((g.field==='TELEFONE'?'Telefone':'E-mail')+' preservado da fonte de '+date(g.sourceDate)+'; ausente na fonte de '+date(g.missingSince)+'.')).join(' ')}</p>`:''}${isAdmin?`<div class="declaration-actions"><button type="button" class="ghost" data-declaration="${escape(id)}">Emitir declaração</button></div>`:''}`+g.products.map(p=>p.consolidated?`<section class="commercial-product"><h3>${escape(p.name)}</h3><p>${p.durationMonths?p.durationMonths+' meses':'Duração comercial a confirmar'}</p><div class="badges">${consensusBadges(p.members)}</div><dl class="facts"><div><dt>Tempo cursado</dt><dd>${escape(elapsedCourseTime(p.members.map(r=>r.DT_INICIO)))}</dd></div></dl><p class="course-time-note">Tempo desde o início da turma; ainda não considera frequência.</p>${p.warnings.map(w=>`<p class="product-warning">${escape(w)}</p>`).join('')}<details><summary>Detalhes das matrículas</summary>${p.members.map(r=>renderAcademicLink(r)).join('')}</details><div class="detail-actions"><button type="button" class="close-detail-inline">Fechar a ficha</button></div></section>`:p.members.map(r=>renderAcademicLink(r)).join('')).join('');if(!$('#detail').open)$('#detail').showModal();api('student-identity?'+new URLSearchParams({studentId:id})).then(identity=>{if(selected===id&&$('#detail').open)$('#detail-cpf').textContent=identity.conflict?'Divergente na fonte — conferir':identity.cpf||'Não informado';}).catch(()=>{if(selected===id&&$('#detail').open)$('#detail-cpf').textContent='Consulta indisponível';});}
 async function saveContacts(form,restore=false){
  const g=groups.find(g=>g.id===form.dataset.contact),r=g.links[0];
  const payload={studentId:g.id,version:r.contact.version};
@@ -103,7 +105,7 @@ async function saveContacts(form,restore=false){
   // Atualiza só os contatos, mantendo textos de observações ainda não salvos.
   form.elements.email.value=r.EMAIL||'';form.elements.phone.value=r.TELEFONE||'';
   $('#detail-content [data-contact-email]').textContent=r.EMAIL||'Não informado';
-  $('#detail-content [data-contact-phone]').textContent=r.TELEFONE||'Não informado';
+  $('#detail-content [data-phone-actions]').innerHTML=phoneMarkup(r.TELEFONE);
   $('#contact-dialog').close();
   toast(restore?'Contatos da fonte restaurados.':'Contatos salvos para todos os vínculos deste aluno.');
  }catch(error){$('#contact-error').textContent=error.message;}finally{buttons.forEach(b=>b.disabled=false);}
@@ -138,9 +140,11 @@ let settingsTab='users',historyPage=1,historyTotal=0,settingsRequest=0;
 const timeStamp=s=>s?new Date(s).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'}):'Sem login registrado';
 function showView(view){
  const planned={attendance:'Lançamento de Frequências',actions:'Ações e Correções',contract:'Gestão de Contrato',debt:'Gestão de Inadimplentes',onboarding:'Onbording de Novatos',evasion:'Risco de Evasão'};
+ $('#leadership-view').hidden=view!=='leadership';
+ if(view==='leadership'&&!$('#leadership-frame').getAttribute('src'))$('#leadership-frame').src=$('#leadership-frame').dataset.src;
  const isAction=['actions','contract','debt','onboarding','evasion'].includes(view);
  $('#students-view').hidden=view!=='students';$('#courses-view').hidden=view!=='courses';$('#settings-view').hidden=view!=='settings';$('#planned-view').hidden=!planned[view];
- for(const id of ['students','courses','settings','attendance','actions','contract','debt','onboarding','evasion']){const button=$('#nav-'+id);button.classList.toggle('nav-active',view===id||(id==='actions'&&isAction));if(view===id)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');}
+ for(const id of ['students','courses','leadership','settings','attendance','actions','contract','debt','onboarding','evasion']){const button=$('#nav-'+id);button.classList.toggle('nav-active',view===id||(id==='actions'&&isAction));if(view===id)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');}
  if(isAction){$('#actions-submenu').hidden=false;$('#nav-actions').setAttribute('aria-expanded','true');}
  if(planned[view]){$('#planned-title').textContent=planned[view];$('#planned-heading').textContent=view==='actions'?'Selecione uma área no submenu':'Desenvolvimento futuro';}
 }
@@ -175,6 +179,7 @@ async function selectSettingsTab(tab){
  $('#history-description').textContent=tab==='logins'?'Veja quem entrou no sistema e quando.':'Resumo de acessos, cadastros e alterações nos acompanhamentos.';
  await settingsAction(async()=>{await loadUsers();if(tab!=='users')await loadHistory();});
 }
+$('#nav-leadership').onclick=()=>showView('leadership');
 $('#nav-students').onclick=()=>showView('students');
 $('#nav-courses').onclick=()=>{showView('courses');courseManager.load();};
 for(const view of ['attendance','contract','debt','onboarding','evasion'])$('#nav-'+view).onclick=()=>showView(view);
