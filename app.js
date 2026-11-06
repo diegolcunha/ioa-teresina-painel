@@ -1,12 +1,12 @@
 import {whatsappLink} from './whatsapp.mjs';
-import {createDeclarations} from './declarations-ui.mjs?v=1793794398366';
-import {createCourseManagement} from './course-management-ui.mjs?v=1793794398366';
-import {elapsedCourseTime} from './course-time.mjs?v=1793794398366';
-import {API_BASE as CONFIGURED_API_BASE} from './api-config.mjs?v=1793794398366';
+import {createDeclarations} from './declarations-ui.mjs?v=1793963437959';
+import {createCourseManagement} from './course-management-ui.mjs?v=1793963437959';
+import {elapsedCourseTime} from './course-time.mjs?v=1793963437959';
+import {API_BASE as CONFIGURED_API_BASE} from './api-config.mjs?v=1793963437959';
 let API_BASE=CONFIGURED_API_BASE;
 // Consulta o destino atual a cada abertura, sem reutilizar o endereço de um túnel anterior.
 if(API_BASE){try{const config=await fetch(new URL('./api-endpoint.json?t='+Date.now(),import.meta.url),{cache:'no-store'});if(config.ok){const value=await config.json();if(/^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/.test(value.apiBase))API_BASE=value.apiBase;}}catch{}}
-import {statusLabel,statusOptions,matchesStatus,matchesSelection,statusSummary,studentStatusSummary,consensusStatus,statusTone} from './status-display.mjs?v=1793794398366';
+import {statusLabel,statusOptions,matchesStatus,matchesSelection,statusSummary,studentStatusSummary,consensusStatus,statusTone} from './status-display.mjs?v=1793963437959';
 const $=s=>document.querySelector(s);let records=[],groups=[],page=1,selected=null,isAdmin=false;
 const normalize=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 const money=n=>n===null||n===undefined?'Não informado':Number(n).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
