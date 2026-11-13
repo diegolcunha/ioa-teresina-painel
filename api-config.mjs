@@ -1,1 +1,1 @@
-export const API_BASE="https://deviation-focusing-andale-group.trycloudflare.com";
+export const API_BASE="https://poly-affiliate-administrative-termination.trycloudflare.com";

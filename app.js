@@ -1,13 +1,13 @@
 import {whatsappLink} from './whatsapp.mjs';
-import {createDeclarations} from './declarations-ui.mjs?v=1794578188418';
-import {createCourseManagement} from './course-management-ui.mjs?v=1794578188418';
-import {elapsedCourseTime} from './course-time.mjs?v=1794578188418';
-import {API_BASE as CONFIGURED_API_BASE} from './api-config.mjs?v=1794578188418';
+import {createDeclarations} from './declarations-ui.mjs?v=1794597891113';
+import {createCourseManagement} from './course-management-ui.mjs?v=1794597891113';
+import {elapsedCourseTime} from './course-time.mjs?v=1794597891113';
+import {API_BASE as CONFIGURED_API_BASE} from './api-config.mjs?v=1794597891113';
 let API_BASE=CONFIGURED_API_BASE;
 // Consulta o destino atual a cada abertura, sem reutilizar o endereço de um túnel anterior.
 if(API_BASE){try{const config=await fetch(new URL('./api-endpoint.json?t='+Date.now(),import.meta.url),{cache:'no-store'});if(config.ok){const value=await config.json();if(/^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/.test(value.apiBase))API_BASE=value.apiBase;}}catch{}}
-import {statusLabel,statusOptions,matchesStatus,matchesSelection,statusSummary,studentStatusSummary,consensusStatus,statusTone} from './status-display.mjs?v=1794578188418';
-const $=s=>document.querySelector(s);let records=[],groups=[],page=1,selected=null,isAdmin=false;
+import {statusLabel,statusOptions,matchesStatus,matchesSelection,statusSummary,studentStatusSummary,consensusStatus,statusTone} from './status-display.mjs?v=1794597891113';
+const $=s=>document.querySelector(s);let records=[],groups=[],page=1,selected=null,isAdmin=false,canIssueDeclarations=false;
 const normalize=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 const money=n=>n===null||n===undefined?'Não informado':Number(n).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const date=s=>s?new Date(s+'T12:00:00').toLocaleDateString('pt-BR'):'Não informada';
@@ -24,7 +24,7 @@ async function api(path,body,options={}){
  return value;
 }
 function toast(message){$('#toast').textContent=message;$('#toast').hidden=false;setTimeout(()=>$('#toast').hidden=true,6000);}
-function showLogin(){isAdmin=false;declarationManager.reset();courseManager.reset();records=[];groups=[];$('#cards').replaceChildren();$('#detail-content').replaceChildren();$('#contact-dialog').close();$('#contact-edit-form').reset();$('#detail').close();$('#users-list').replaceChildren();$('#history-list').replaceChildren();$('#user-form').reset();$('#dashboard').hidden=true;$('#login').hidden=false;}
+function showLogin(){isAdmin=false;canIssueDeclarations=false;declarationManager.reset();courseManager.reset();records=[];groups=[];$('#cards').replaceChildren();$('#detail-content').replaceChildren();$('#contact-dialog').close();$('#contact-edit-form').reset();$('#detail').close();$('#users-list').replaceChildren();$('#history-list').replaceChildren();$('#user-form').reset();$('#dashboard').hidden=true;$('#login').hidden=false;}
 function badge(value,field,withCategory=false){value=statusLabel(field,value);const tone=statusTone(field,value);const category=withCategory?({STATUS_FINANCEIRO:'Financeiro',TEM_CONTRATO:'Contrato',STATUS:'Acadêmico'}[field]||''):'';return `<span class="badge ${tone}">${category?escape(category)+': ':''}${escape(value)}</span>`;}
 function consensusBadges(members){return ['STATUS_FINANCEIRO','TEM_CONTRATO','STATUS'].map(field=>badge(consensusStatus(members,field),field,true)).join('');}
 function filterValues(id){return [...$('#'+id).selectedOptions].map(option=>option.value).filter(Boolean);}
@@ -63,7 +63,7 @@ function setupMultiFilter(id){
  dropdown.addEventListener('keydown',event=>{if(event.key==='Escape'){dropdown.open=false;summary.focus();}});
 }
 document.addEventListener('click',event=>{for(const dropdown of document.querySelectorAll('.multi-filter'))if(!dropdown.contains(event.target))dropdown.open=false;});
-async function load(user){isAdmin=!!user.admin;
+async function load(user){isAdmin=!!user.admin;canIssueDeclarations=isAdmin||!!user.canIssueDeclarations;
  const source=await api('students');records=source.records;const byId=new Map();for(const r of records){if(!byId.has(r.ID_CLIENTE))byId.set(r.ID_CLIENTE,{id:r.ID_CLIENTE,name:r.NOME,links:[]});byId.get(r.ID_CLIENTE).links.push(r);}groups=[...byId.values()].sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
  const products=source.products||records.map(r=>({id:r.key,studentId:r.ID_CLIENTE,name:r.CURSO_AJUSTADO,memberKeys:[r.key],consolidated:false,warnings:[]}));
  const recordMap=new Map(records.map(r=>[r.key,r]));for(const g of groups)g.products=products.filter(p=>p.studentId===g.id).map(p=>({...p,members:p.memberKeys.map(key=>recordMap.get(key))}));
@@ -88,7 +88,7 @@ function render(){
  $('#cards').innerHTML=filtered.slice((page-1)*12,page*12).map(g=>{const r=g.links[0];const initials=g.name.split(' ').filter(Boolean).slice(0,2).map(s=>s[0]).join('');return `<article class="student"><div class="student-top"><div class="avatar">${escape(initials)}</div><div><h3>${escape(g.name.toLocaleLowerCase('pt-BR'))}</h3><span class="id">ID ${escape(g.id)} · ${g.products.length} produto(s) no filtro</span></div></div><p class="course-name">${escape([...new Set(g.products.map(p=>p.name))].join(" · "))}</p><div class="badges">${consensusBadges(g.links)}</div><div class="student-bottom"><span>${r.review.checked?'Conferência registrada':'Conferência pendente'}</span><button data-student="${escape(g.id)}">Ver ficha →</button></div></article>`;}).join('')||'<div class="empty">Nenhum aluno encontrado para estes filtros.</div>';
 }
 function phoneMarkup(phone){const link=whatsappLink(phone);return `<strong data-contact-phone>${escape(phone||'Não informado')}</strong>${link.url?`<a class="whatsapp-link" href="${escape(link.url)}" target="_blank" rel="noopener noreferrer" aria-label="Abrir conversa no WhatsApp em outra aba">Abrir WhatsApp ↗</a>`:link.reason?`<small class="phone-warning">${escape(link.reason)}</small>`:''}`;}
-function openDetail(id){selected=id;const g=groups.find(g=>g.id===id),primary=g.links[0];$('#detail-content').innerHTML=`<h2 class="detail-title">${escape(g.name)}</h2><p>ID ${escape(id)} · ${g.products.length} produto(s) · ${g.links.length} registro(s) de origem</p><p class="student-identity">CPF: <strong id="detail-cpf">Consultando…</strong></p><div class="contact-summary"><div><span>E-mail</span><strong data-contact-email>${escape(primary.EMAIL||'Não informado')}</strong></div><div><span>Telefone</span><div data-phone-actions>${phoneMarkup(primary.TELEFONE)}</div></div><button type="button" class="ghost" data-edit-contacts="${escape(id)}">Editar contatos</button></div>${primary.contactSourceGaps?.length?`<p class="helper">${primary.contactSourceGaps.map(g=>escape((g.field==='TELEFONE'?'Telefone':'E-mail')+' preservado da fonte de '+date(g.sourceDate)+'; ausente na fonte de '+date(g.missingSince)+'.')).join(' ')}</p>`:''}${isAdmin?`<div class="declaration-actions"><button type="button" class="ghost" data-declaration="${escape(id)}">Emitir declaração</button></div>`:''}`+g.products.map(p=>p.consolidated?`<section class="commercial-product"><h3>${escape(p.name)}</h3><p>${p.durationMonths?p.durationMonths+' meses':'Duração comercial a confirmar'}</p><div class="badges">${consensusBadges(p.members)}</div><dl class="facts"><div><dt>Tempo cursado</dt><dd>${escape(elapsedCourseTime(p.members.map(r=>r.DT_INICIO)))}</dd></div></dl><p class="course-time-note">Tempo desde o início da turma; ainda não considera frequência.</p>${p.warnings.map(w=>`<p class="product-warning">${escape(w)}</p>`).join('')}<details><summary>Detalhes das matrículas</summary>${p.members.map(r=>renderAcademicLink(r)).join('')}</details><div class="detail-actions"><button type="button" class="close-detail-inline">Fechar a ficha</button></div></section>`:p.members.map(r=>renderAcademicLink(r)).join('')).join('');if(!$('#detail').open)$('#detail').showModal();api('student-identity?'+new URLSearchParams({studentId:id})).then(identity=>{if(selected===id&&$('#detail').open)$('#detail-cpf').textContent=identity.conflict?'Divergente na fonte — conferir':identity.cpf||'Não informado';}).catch(()=>{if(selected===id&&$('#detail').open)$('#detail-cpf').textContent='Consulta indisponível';});}
+function openDetail(id){selected=id;const g=groups.find(g=>g.id===id),primary=g.links[0];$('#detail-content').innerHTML=`<h2 class="detail-title">${escape(g.name)}</h2><p>ID ${escape(id)} · ${g.products.length} produto(s) · ${g.links.length} registro(s) de origem</p><p class="student-identity">CPF: <strong id="detail-cpf">Consultando…</strong></p><div class="contact-summary"><div><span>E-mail</span><strong data-contact-email>${escape(primary.EMAIL||'Não informado')}</strong></div><div><span>Telefone</span><div data-phone-actions>${phoneMarkup(primary.TELEFONE)}</div></div><button type="button" class="ghost" data-edit-contacts="${escape(id)}">Editar contatos</button></div>${primary.contactSourceGaps?.length?`<p class="helper">${primary.contactSourceGaps.map(g=>escape((g.field==='TELEFONE'?'Telefone':'E-mail')+' preservado da fonte de '+date(g.sourceDate)+'; ausente na fonte de '+date(g.missingSince)+'.')).join(' ')}</p>`:''}${canIssueDeclarations?`<div class="declaration-actions"><button type="button" class="ghost" data-declaration="${escape(id)}">Emitir declaração</button></div>`:''}`+g.products.map(p=>p.consolidated?`<section class="commercial-product"><h3>${escape(p.name)}</h3><p>${p.durationMonths?p.durationMonths+' meses':'Duração comercial a confirmar'}</p><div class="badges">${consensusBadges(p.members)}</div><dl class="facts"><div><dt>Tempo cursado</dt><dd>${escape(elapsedCourseTime(p.members.map(r=>r.DT_INICIO)))}</dd></div></dl><p class="course-time-note">Tempo desde o início da turma; ainda não considera frequência.</p>${p.warnings.map(w=>`<p class="product-warning">${escape(w)}</p>`).join('')}<details><summary>Detalhes das matrículas</summary>${p.members.map(r=>renderAcademicLink(r)).join('')}</details><div class="detail-actions"><button type="button" class="close-detail-inline">Fechar a ficha</button></div></section>`:p.members.map(r=>renderAcademicLink(r)).join('')).join('');if(!$('#detail').open)$('#detail').showModal();api('student-identity?'+new URLSearchParams({studentId:id})).then(identity=>{if(selected===id&&$('#detail').open)$('#detail-cpf').textContent=identity.conflict?'Divergente na fonte — conferir':identity.cpf||'Não informado';}).catch(()=>{if(selected===id&&$('#detail').open)$('#detail-cpf').textContent='Consulta indisponível';});}
 async function saveContacts(form,restore=false){
  const g=groups.find(g=>g.id===form.dataset.contact),r=g.links[0];
  const payload={studentId:g.id,version:r.contact.version};
@@ -150,7 +150,7 @@ function showView(view){
 }
 async function loadUsers(){
  const data=await api('admin/users');
- $('#users-list').innerHTML=data.users.map(u=>`<tr><td><strong>${escape(u.username)}</strong></td><td>${u.admin?'Administrador':'Usuário'}</td><td>${escape(timeStamp(u.lastLogin))}</td></tr>`).join('')||'<tr><td colspan="3">Nenhum usuário cadastrado.</td></tr>';
+ $('#users-list').innerHTML=data.users.map(u=>`<tr><td><strong>${escape(u.username)}</strong></td><td>${u.admin?'Administrador':'Usuário'}</td><td><input type="checkbox" data-declaration-user="${escape(u.username)}" aria-label="Emitir declarações: ${escape(u.username)}" ${u.admin||u.canIssueDeclarations?'checked':''} ${u.admin?'disabled':''}></td><td>${escape(timeStamp(u.lastLogin))}</td></tr>`).join('')||'<tr><td colspan="4">Nenhum usuário cadastrado.</td></tr>';
  const selectedUser=$('#history-user').value;$('#history-user').length=1;
  for(const u of data.users)$('#history-user').add(new Option(u.username,u.username));
  if(selectedUser&&data.users.some(u=>u.username===selectedUser))$('#history-user').value=selectedUser;
@@ -164,7 +164,7 @@ async function loadHistory(){
  if(request!==settingsRequest)return;
  historyTotal=data.total;const pages=Math.max(1,Math.ceil(data.total/data.pageSize));
  if(historyPage>pages){historyPage=pages;return loadHistory();}
- const labels={contacts:'Atualização de contatos',login:'Login',logout:'Saída',user_created:'Cadastro de usuário',review:'Acompanhamento',import:'Importação da base'};
+ const labels={contacts:'Atualização de contatos',login:'Login',logout:'Saída',user_created:'Cadastro de usuário',declaration_permission:'Permissão de declarações',review:'Acompanhamento',import:'Importação da base'};
  $('#history-list').innerHTML=data.rows.map(r=>`<tr><td class="when">${escape(timeStamp(r.created))}</td><td><strong>${escape(r.author)}</strong></td><td><span class="badge">${escape(labels[r.action]||r.action)}</span></td><td>${escape(r.summary)}${r.student?`<small>${escape(r.student.name)} · ID ${escape(r.student.id)}<br>${escape(r.student.course)}</small>`:r.action==='review'?'<small>Vínculo fora da base atual.</small>':''}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">Nenhum registro para este filtro.</td></tr>';
  $('#history-count').textContent=data.total+' registro(s)';$('#history-page').textContent=historyPage+' de '+pages;
  $('#history-prev').disabled=historyPage<=1;$('#history-next').disabled=historyPage>=pages;
@@ -189,6 +189,19 @@ $('#nav-actions').onclick=()=>{
 };
 $('#nav-settings').onclick=()=>{showView('settings');selectSettingsTab('users');};
 for(const button of document.querySelectorAll('[data-settings-tab]'))button.onclick=()=>selectSettingsTab(button.dataset.settingsTab);
+$('#users-list').addEventListener('change',async event=>{
+ const checkbox=event.target.closest('[data-declaration-user]');
+ if(!checkbox)return;
+ const enabled=checkbox.checked;
+ checkbox.disabled=true;
+ await settingsAction(async()=>{
+  try{
+   await api('admin/users/declarations',{username:checkbox.dataset.declarationUser,enabled});
+   toast(enabled?'Emissão de declarações habilitada.':'Permissão de emitir declarações revogada.');
+  }catch(error){checkbox.checked=!enabled;throw error;}
+  finally{checkbox.disabled=false;}
+ });
+});
 $('#refresh-users').onclick=()=>settingsAction(loadUsers);
 $('#refresh-history').onclick=()=>settingsAction(loadHistory);
 $('#history-user').onchange=()=>{historyPage=1;settingsAction(loadHistory);};
