@@ -1,1 +1,1 @@
-export const API_BASE="https://poly-affiliate-administrative-termination.trycloudflare.com";
+export const API_BASE="https://informational-calculator-job-gas.trycloudflare.com";
