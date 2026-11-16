@@ -1,1 +1,1 @@
-export const API_BASE="https://informational-calculator-job-gas.trycloudflare.com";
+export const API_BASE="https://duck-glass-cruise-indexes.trycloudflare.com";
