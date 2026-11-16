@@ -1,1 +1,1 @@
-export const API_BASE="https://duck-glass-cruise-indexes.trycloudflare.com";
+export const API_BASE="https://immediate-shuttle-blvd-operation.trycloudflare.com";
