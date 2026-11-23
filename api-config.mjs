@@ -1,1 +1,1 @@
-export const API_BASE="https://sql-madonna-theft-seed.trycloudflare.com";
+export const API_BASE="https://singles-forecasts-bishop-department.trycloudflare.com";
